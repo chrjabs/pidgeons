@@ -1,0 +1,2 @@
+doc-valid-idents = ["VeriPB", ".."]
+avoid-breaking-exported-api = false

@@ -1,0 +1,13 @@
+[package]
+name = "pidgeons"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Christoph Jabs <christoph.jabs@helsinki.fi>"]
+description = "A library for writing VeriPB proofs"
+keywords = ["sat", "satisfiability", "encodings"]
+repository = "https://github.com/chrjabs/pidgeons"
+readme = "README.md"
+
+[dependencies]
+itertools = "0.13.0"
