@@ -19,11 +19,11 @@
 //! - [x] `output`
 //! - [x] `conclusion`
 //! - [ ] Subproofs
-//! - [ ] `e`
-//! - [ ] `ea`
-//! - [ ] `eobj`
-//! - [ ] `i`
-//! - [ ] `ia`
+//! - [x] `e`
+//! - [x] `ea`
+//! - [x] `eobj`
+//! - [x] `i`
+//! - [x] `ia`
 //! - [ ] `#`
 //! - [ ] `w`
 //! - [ ] `strengthening_to_core`
@@ -290,7 +290,12 @@ where
     /// # Errors
     ///
     /// If writing the proof fails.
+    ///
+    /// # Panics
+    ///
+    /// If the problem is not an optimization problem.
     pub fn update_objective(&mut self, update: &ObjectiveUpdate) -> io::Result<()> {
+        assert!(matches!(self.problem_type, ProblemType::Optimization));
         writeln!(self.writer, "obju {update}")
     }
 
@@ -461,6 +466,111 @@ where
         self.output(guarantee, r#type)?;
         self.conclusion(conclusion)?;
         self.end()
+    }
+
+    /// Checks whether a constraint is equal to a constraint that is already in the database
+    ///
+    /// # Proof Log
+    ///
+    /// Writes a `e`-rule line.
+    ///
+    /// # Errors
+    ///
+    /// If writing the proof fails.
+    pub fn equals<C: ConstraintLike>(
+        &mut self,
+        constraint: &C,
+        equals: Option<ConstraintId>,
+    ) -> io::Result<()> {
+        if let Some(id) = equals {
+            writeln!(self.writer, "e {} ; {id}", constraint.constr_str())
+        } else {
+            writeln!(self.writer, "e {} ;", constraint.constr_str())
+        }
+    }
+
+    /// Checks whether a constraint is equal to a constraint that is already in the database and
+    /// adds the constraint
+    ///
+    /// # Proof Log
+    ///
+    /// Writes a `ea`-rule line.
+    ///
+    /// # Errors
+    ///
+    /// If writing the proof fails.
+    pub fn equals_add<C: ConstraintLike>(
+        &mut self,
+        constraint: &C,
+        equals: Option<ConstraintId>,
+    ) -> io::Result<AbsConstraintId> {
+        if let Some(id) = equals {
+            writeln!(self.writer, "ea {} ; {id}", constraint.constr_str())?;
+        } else {
+            writeln!(self.writer, "ea {} ;", constraint.constr_str())?;
+        }
+        Ok(self.new_id())
+    }
+
+    /// Checks whether the given objective is equal to the current objective
+    ///
+    /// # Proof Log
+    ///
+    /// Writes a `eobj`-rule line.
+    ///
+    /// # Errors
+    ///
+    /// If writing the proof fails.
+    ///
+    /// # Panics
+    ///
+    /// If the problem is not an optimization problem.
+    pub fn obj_equals<O: ObjectiveLike>(&mut self, objective: &O) -> io::Result<()> {
+        assert!(matches!(self.problem_type, ProblemType::Optimization));
+        writeln!(self.writer, "eobj {} ;", objective.obj_str())
+    }
+
+    /// Checks whether the given constraint is implied
+    ///
+    /// # Proof Log
+    ///
+    /// Writes an `i`-rule line.
+    ///
+    /// # Errors
+    ///
+    /// If writing the proof fails.
+    pub fn implied<C: ConstraintLike>(
+        &mut self,
+        constraint: &C,
+        implicant: Option<ConstraintId>,
+    ) -> io::Result<()> {
+        if let Some(id) = implicant {
+            writeln!(self.writer, "i {} ; {id}", constraint.constr_str())
+        } else {
+            writeln!(self.writer, "i {} ;", constraint.constr_str())
+        }
+    }
+
+    /// Checks whether the given constraint is implied and adds it
+    ///
+    /// # Proof Log
+    ///
+    /// Writes an `is`-rule line.
+    ///
+    /// # Errors
+    ///
+    /// If writing the proof fails.
+    pub fn implied_add<C: ConstraintLike>(
+        &mut self,
+        constraint: &C,
+        implicant: Option<ConstraintId>,
+    ) -> io::Result<AbsConstraintId> {
+        if let Some(id) = implicant {
+            writeln!(self.writer, "ia {} ; {id}", constraint.constr_str())?;
+        } else {
+            writeln!(self.writer, "ia {} ;", constraint.constr_str())?;
+        }
+        Ok(self.new_id())
     }
 }
 

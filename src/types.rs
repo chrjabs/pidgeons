@@ -7,7 +7,7 @@ use itertools::Itertools;
 use super::{unreachable_err, ConstraintLike, ObjectiveLike};
 
 /// The proof problem type
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ProblemType {
     /// Problem type is unknown
     #[default]

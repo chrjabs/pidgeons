@@ -21,11 +21,11 @@ This library is a simple abstraction layer for writing proofs checkable with Ver
 - [x] `output`
 - [x] `conclusion`
 - [ ] Subproofs
-- [ ] `e`
-- [ ] `ea`
-- [ ] `eobj`
-- [ ] `i`
-- [ ] `ia`
+- [x] `e`
+- [x] `ea`
+- [x] `eobj`
+- [x] `i`
+- [x] `ia`
 - [ ] `#`
 - [ ] `w`
 - [ ] `strengthening_to_core`
