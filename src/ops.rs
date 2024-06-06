@@ -284,52 +284,52 @@ impl Div<usize> for Axiom {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ConstraintId, VarLike};
+    use crate::{ConstraintId as Id, VarLike};
 
     #[test]
     fn constr_add() {
-        let add = ConstraintId(42) + ConstraintId(45);
+        let add = Id::abs(42) + Id::abs(45);
         assert_eq!(&format!("{add}"), "42 45 +");
     }
 
     #[test]
     fn constr_mult() {
-        let mult = ConstraintId(42) * 5;
+        let mult = Id::abs(42) * 5;
         assert_eq!(&format!("{mult}"), "42 5 *");
-        let mult = 5 * ConstraintId(42);
+        let mult = 5 * Id::abs(42);
         assert_eq!(&format!("{mult}"), "42 5 *");
     }
 
     #[test]
     fn constr_div() {
-        let mult = ConstraintId(42) / 5;
+        let mult = Id::abs(42) / 5;
         assert_eq!(&format!("{mult}"), "42 5 d");
     }
 
     #[test]
     fn constr_saturate() {
-        let mult = ConstraintId(42).saturate();
+        let mult = Id::abs(42).saturate();
         assert_eq!(&format!("{mult}"), "42 s");
     }
 
     #[test]
     fn constr_weaken() {
-        let mult = ConstraintId(42).weaken();
+        let mult = Id::abs(42).weaken();
         assert_eq!(&format!("{mult}"), "42 w");
     }
 
     #[test]
     fn constr_add_axiom() {
         let var = "x5";
-        let add = ConstraintId(42) + var.pos_axiom();
+        let add = Id::abs(42) + var.pos_axiom();
         assert_eq!(&format!("{add}"), "42 x5 +");
-        let add = ConstraintId(42) + var.neg_axiom();
+        let add = Id::abs(42) + var.neg_axiom();
         assert_eq!(&format!("{add}"), "42 ~x5 +");
     }
 
     #[test]
     fn sequence() {
-        let seq = (ConstraintId(42) * 3 + ConstraintId(43)).saturate() / 2;
+        let seq = (Id::abs(42) * 3 + Id::abs(43)).saturate() / 2;
         assert_eq!(&format!("{seq}"), "42 3 * 43 + s 2 d");
     }
 }

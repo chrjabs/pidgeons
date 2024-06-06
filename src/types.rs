@@ -26,6 +26,18 @@ pub enum ConstraintId {
 }
 
 impl ConstraintId {
+    /// Gets an absolute constraint ID with a given value
+    ///
+    /// # Panics
+    ///
+    /// If `x` is zero.
+    #[must_use]
+    pub fn abs(x: usize) -> ConstraintId {
+        ConstraintId::Abs(AbsConstraintId(
+            x.try_into().expect("constraint ID cannot be zero"),
+        ))
+    }
+
     /// Gets a relative constraint ID to the x-last constraint
     ///
     /// # Panics
@@ -291,20 +303,20 @@ pub enum OutputGuarantee {
     /// No guarantee
     None,
     /// All constraints are derivable
-    Derivable,
+    Derivable(OutputType),
     /// The constraints are equisatisfiable
-    Equisatisfiable,
+    Equisatisfiable(OutputType),
     /// The constraints are equiptimal
-    Equioptimal,
+    Equioptimal(OutputType),
 }
 
 impl fmt::Display for OutputGuarantee {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             OutputGuarantee::None => write!(f, "NONE"),
-            OutputGuarantee::Derivable => write!(f, "DERIVABLE"),
-            OutputGuarantee::Equisatisfiable => write!(f, "EQUISATISFIABLE"),
-            OutputGuarantee::Equioptimal => write!(f, "EQUIOPTIMAL"),
+            OutputGuarantee::Derivable(t) => write!(f, "DERIVABLE {t}"),
+            OutputGuarantee::Equisatisfiable(t) => write!(f, "EQUISATISFIABLE {t}"),
+            OutputGuarantee::Equioptimal(t) => write!(f, "EQUIOPTIMAL {t}"),
         }
     }
 }

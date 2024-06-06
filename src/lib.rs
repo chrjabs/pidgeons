@@ -6,24 +6,24 @@
 //!
 //! ## Coverage of VeriPB Syntax
 //!
-//! - [x] `f`
-//! - [x] `pol`
-//! - [x] `rup`
-//! - [x] `del`
-//! - [x] `delc`
-//! - [x] `deld`
-//! - [x] `obju`
-//! - [x] `red`
-//! - [x] `dom`
-//! - [x] `core`
-//! - [x] `output`
-//! - [x] `conclusion`
+//! - [x] `f`: [`Proof::new`]
+//! - [x] `pol`: [`Proof::operations`]
+//! - [x] `rup`: [`Proof::reverse_unit_prop`]
+//! - [x] `del`: [`Proof::delete_ids`], [`Proof::delete_id_range`], [`Proof::delete_constr`]
+//! - [x] `delc`: [`Proof::delete_core_ids`]
+//! - [x] `deld`: [`Proof::delete_derived_ids`]
+//! - [x] `obju`: [`Proof::update_objective`]
+//! - [x] `red`: [`Proof::redundant`]
+//! - [x] `dom`: [`Proof::dominated`]
+//! - [x] `core`: [`Proof::move_ids_to_core`], [`Proof::move_range_to_core`]
+//! - [x] `output`: [`Proof::output`], [`Proof::conclude`]
+//! - [x] `conclusion`: [`Proof::conclusion`], [`Proof::conclude`]
 //! - [ ] Subproofs
-//! - [x] `e`
-//! - [x] `ea`
-//! - [x] `eobj`
-//! - [x] `i`
-//! - [x] `ia`
+//! - [x] `e`: [`Proof::equals`]
+//! - [x] `ea`: [`Proof::equals_add`]
+//! - [x] `eobj`: [`Proof::obj_equals`]
+//! - [x] `i`: [`Proof::implied`]
+//! - [x] `ia`: [`Proof::implied_add`]
 //! - [ ] `#`
 //! - [ ] `w`
 //! - [ ] `strengthening_to_core`
@@ -76,6 +76,10 @@ where
     Writer: io::Write,
 {
     /// Initializes a proof with a given writer
+    ///
+    /// # Performance
+    ///
+    /// For performance reasons, consider using a buffered writer (e.g., [`std::io::BufWriter`].
     ///
     /// # Proof Log
     ///
@@ -376,7 +380,7 @@ where
     /// # Panics
     ///
     /// If `ids` is empty.
-    pub fn move_id_to_core(&mut self, ids: &[ConstraintId]) -> io::Result<()> {
+    pub fn move_ids_to_core(&mut self, ids: &[ConstraintId]) -> io::Result<()> {
         assert!(!ids.is_empty());
         writeln!(self.writer, "core id {}", ids.iter().format(" "))
     }
@@ -418,8 +422,8 @@ where
     /// # Errors
     ///
     /// If writing the proof fails.
-    pub fn output(&mut self, guarantee: OutputGuarantee, r#type: OutputType) -> io::Result<()> {
-        writeln!(self.writer, "output {guarantee} {type}")
+    pub fn output(&mut self, guarantee: OutputGuarantee) -> io::Result<()> {
+        writeln!(self.writer, "output {guarantee}")
     }
 
     /// Adds a conclusion section to the proof
@@ -435,7 +439,7 @@ where
         writeln!(self.writer, "conclusion {conclusion}")
     }
 
-    /// Ends the proof
+    /// Ends the proof and returns the writer
     ///
     /// # Proof Log
     ///
@@ -444,8 +448,9 @@ where
     /// # Errors
     ///
     /// If writing the proof fails.
-    pub fn end(mut self) -> io::Result<()> {
-        writeln!(self.writer, "end pseudo-Boolean proof")
+    pub fn end(mut self) -> io::Result<Writer> {
+        writeln!(self.writer, "end pseudo-Boolean proof")?;
+        Ok(self.writer)
     }
 
     /// Concludes the proof by adding the output and conclusions sections and ending the proof.
@@ -460,10 +465,9 @@ where
     pub fn conclude(
         mut self,
         guarantee: OutputGuarantee,
-        r#type: OutputType,
         conclusion: &Conclusion,
-    ) -> io::Result<()> {
-        self.output(guarantee, r#type)?;
+    ) -> io::Result<Writer> {
+        self.output(guarantee)?;
         self.conclusion(conclusion)?;
         self.end()
     }
@@ -622,9 +626,9 @@ impl VarLike for String {
     }
 }
 
-impl VarLike for str {
+impl VarLike for &str {
     fn var_str(&self) -> String {
-        String::from(self)
+        String::from(*self)
     }
 }
 
@@ -636,6 +640,18 @@ pub trait ConstraintLike {
     ///
     /// Must return a valid OPB-style constraint.
     fn constr_str(&self) -> String;
+}
+
+impl ConstraintLike for String {
+    fn constr_str(&self) -> String {
+        self.clone()
+    }
+}
+
+impl ConstraintLike for &str {
+    fn constr_str(&self) -> String {
+        String::from(*self)
+    }
 }
 
 /// Trait that needs to be implemented for types used as objectives
