@@ -7,7 +7,9 @@ use std::{
     process::Command,
 };
 
-use pidgeons::{Conclusion, ConstraintId as Id, OutputGuarantee, Proof, VarLike};
+use pidgeons::{
+    Conclusion, ConstraintId as Id, OperationSequence, OutputGuarantee, Proof, VarLike,
+};
 
 fn print_file<P: AsRef<Path>>(path: P) {
     for line in BufReader::new(File::open(path).expect("could not open file")).lines() {
@@ -79,4 +81,83 @@ fn implication_weaker() {
         format!("{manifest}/data/implication_weaker.opb"),
         proof_file.path(),
     );
+}
+
+#[test]
+fn g3_g5() {
+    let mut proof = new_proof(361, false);
+    let a = proof.redundant(
+        &"-1 x0_0 -1 x1_0 -1 x2_0 -1 x3_0 -1 x4_0 -1 x5_0 -1 x6_0 -1 x7_0 -1 x8_0 -1 x9_0 >= -1",
+        &[],
+    ).unwrap();
+    let b = proof
+        .redundant(
+            &"1 ~x0_0 1 x9_1 1 x9_2 1 x9_3 1 x9_4 1 x9_5 1 x9_6 1 x9_7 1 x9_8 1 x9_9 1 x9_10 >= 1",
+            &[],
+        )
+        .unwrap();
+    let c = proof
+        .redundant(&"1 ~x9_1 1 x1_0 1 x1_2 1 x1_10 >= 1", &[])
+        .unwrap();
+    let d = proof
+        .redundant(&"1 ~x9_2 1 x1_0 1 x1_1 1 x1_3 >= 1", &[])
+        .unwrap();
+    let e = proof
+        .redundant(&"1 ~x9_3 1 x1_0 1 x1_2 1 x1_4 >= 1", &[])
+        .unwrap();
+    let f = proof
+        .redundant(&"1 ~x9_4 1 x1_0 1 x1_3 1 x1_5 >= 1", &[])
+        .unwrap();
+    let g = proof
+        .redundant(&"1 ~x9_5 1 x1_0 1 x1_4 1 x1_6 >= 1", &[])
+        .unwrap();
+    let h = proof
+        .redundant(&"1 ~x9_6 1 x1_0 1 x1_5 1 x1_7 >= 1", &[])
+        .unwrap();
+    let i = proof
+        .redundant(&"1 ~x9_7 1 x1_0 1 x1_6 1 x1_8 >= 1", &[])
+        .unwrap();
+    let j = proof
+        .redundant(&"1 ~x9_8 1 x1_0 1 x1_7 1 x1_9 >= 1", &[])
+        .unwrap();
+    let k = proof
+        .redundant(&"1 ~x9_9 1 x1_0 1 x1_8 1 x1_10 >= 1", &[])
+        .unwrap();
+    let l = proof
+        .redundant(&"1 ~x9_10 1 x1_0 1 x1_1 1 x1_9 >= 1", &[])
+        .unwrap();
+    proof.set_level(1).unwrap();
+    let sum = proof
+        .operations(
+            &[c, d, e, f, g, h, i, j, k, l]
+                .into_iter()
+                .fold(OperationSequence::from(Id::from(b)), |seq, id| {
+                    seq + Id::from(id)
+                })
+                .saturate(),
+        )
+        .unwrap();
+    proof.implied_add(&"1 ~x0_0 1 x1_0 1 x1_1 1 x1_2 1 x1_3 1 x1_4 1 x1_5 1 x1_6 1 x1_7 1 x1_8 1 x1_9 1 x1_10 >= 1", Some(Id::from(sum))).unwrap();
+    let sum2 = proof
+        .operations(&(Id::from(sum) + Id::from(a)).saturate())
+        .unwrap();
+    let implied = proof
+        .implied_add(
+            &"1 ~x0_0 1 x1_1 1 x1_2 1 x1_3 1 x1_4 1 x1_5 1 x1_6 1 x1_7 1 x1_8 1 x1_9 1 x1_10 >= 1",
+            Some(Id::from(sum2)),
+        )
+        .unwrap();
+    proof.set_level(0).unwrap();
+    proof
+        .implied_add(
+            &"1 ~x0_0 1 x1_1 1 x1_2 1 x1_3 1 x1_4 1 x1_5 1 x1_6 1 x1_7 1 x1_8 1 x1_9 1 x1_10 >= 1",
+            Some(Id::from(implied)),
+        )
+        .unwrap();
+    proof.wipe_level(1).unwrap();
+    let proof_file = proof
+        .conclude(OutputGuarantee::None, &Conclusion::None)
+        .unwrap();
+    let manifest = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    verify_proof(format!("{manifest}/data/g3-g5.opb"), proof_file.path());
 }

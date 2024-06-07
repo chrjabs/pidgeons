@@ -24,8 +24,8 @@
 //! - [x] `eobj`: [`Proof::obj_equals`]
 //! - [x] `i`: [`Proof::implied`]
 //! - [x] `ia`: [`Proof::implied_add`]
-//! - [ ] `#`
-//! - [ ] `w`
+//! - [x] `#`: [`Proof::set_level`]
+//! - [x] `w`: [`Proof::wipe_level`]
 //! - [ ] `strengthening_to_core`
 //! - [ ] `def_order`
 //! - [ ] `load_order`
@@ -575,6 +575,40 @@ where
             writeln!(self.writer, "ia {} ;", constraint.constr_str())?;
         }
         Ok(self.new_id())
+    }
+
+    /// Sets the `level` of constraints added in the future
+    ///
+    /// # Proof Log
+    ///
+    /// Writes a `#`-rule line.
+    ///
+    /// # Panics
+    ///
+    /// If `level` is zero.
+    ///
+    /// # Errors
+    ///
+    /// If writing the proof fails.
+    pub fn set_level(&mut self, level: usize) -> io::Result<()> {
+        writeln!(self.writer, "# {level}")
+    }
+
+    /// Wipes out constraints from the given `level` or higher
+    ///
+    /// # Proof Log
+    ///
+    /// Writes a `w`-rule line.
+    ///
+    /// # Panics
+    ///
+    /// If `level` is zero.
+    ///
+    /// # Errors
+    ///
+    /// If writing the proof fails.
+    pub fn wipe_level(&mut self, level: usize) -> io::Result<()> {
+        writeln!(self.writer, "w {level}")
     }
 }
 

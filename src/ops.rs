@@ -13,6 +13,7 @@ use itertools::Itertools;
 use super::{Axiom, ConstraintId};
 
 /// A sequence of operations to be added to the proof in reverse polish notation
+#[derive(Clone, Debug)]
 pub struct OperationSequence(Vec<Operation>);
 
 impl OperationSequence {
@@ -84,6 +85,7 @@ impl Div<usize> for OperationSequence {
 }
 
 /// A sequence of operations to be added to the proof in reverse polish notation
+#[derive(Clone, Debug)]
 pub(crate) enum Operation {
     /// A trivial identity operation to get a constraint from its [`ConstraintId`]
     Id(ConstraintId),

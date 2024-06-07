@@ -152,6 +152,7 @@ impl fmt::Display for RelConstraintId {
 }
 
 /// An axiom or literal
+#[derive(Clone, Debug)]
 pub struct Axiom {
     /// Whether the axiom/literal is negated
     pub(crate) neg: bool,
