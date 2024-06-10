@@ -8,7 +8,8 @@ use std::{
 };
 
 use pidgeons::{
-    Conclusion, ConstraintId as Id, OperationSequence, OutputGuarantee, Proof, VarLike,
+    Conclusion, ConstraintId as Id, OperationLike, OperationSequence, OutputGuarantee, Proof,
+    VarLike,
 };
 
 fn print_file<P: AsRef<Path>>(path: P) {
@@ -51,9 +52,7 @@ fn all_diff() {
                 + "y_x2_9".pos_axiom()),
         )
         .unwrap();
-    let contrad = proof
-        .operations(&(Id::from(new1) + Id::from(new2)))
-        .unwrap();
+    let contrad = proof.operations(&(new1 + new2)).unwrap();
     let proof_file = proof
         .conclude(
             OutputGuarantee::None,
@@ -131,16 +130,12 @@ fn g3_g5() {
         .operations(
             &[c, d, e, f, g, h, i, j, k, l]
                 .into_iter()
-                .fold(OperationSequence::from(Id::from(b)), |seq, id| {
-                    seq + Id::from(id)
-                })
+                .fold(OperationSequence::from(b), |seq, id| seq + id)
                 .saturate(),
         )
         .unwrap();
     proof.implied_add(&"1 ~x0_0 1 x1_0 1 x1_1 1 x1_2 1 x1_3 1 x1_4 1 x1_5 1 x1_6 1 x1_7 1 x1_8 1 x1_9 1 x1_10 >= 1", Some(Id::from(sum))).unwrap();
-    let sum2 = proof
-        .operations(&(Id::from(sum) + Id::from(a)).saturate())
-        .unwrap();
+    let sum2 = proof.operations(&(sum + a).saturate()).unwrap();
     let implied = proof
         .implied_add(
             &"1 ~x0_0 1 x1_1 1 x1_2 1 x1_3 1 x1_4 1 x1_5 1 x1_6 1 x1_7 1 x1_8 1 x1_9 1 x1_10 >= 1",

@@ -10,23 +10,23 @@ use std::{
 
 use itertools::Itertools;
 
+use crate::AbsConstraintId;
+
 use super::{Axiom, ConstraintId};
 
 /// A sequence of operations to be added to the proof in reverse polish notation
 #[derive(Clone, Debug)]
 pub struct OperationSequence(Vec<Operation>);
 
-impl OperationSequence {
-    /// Applies saturation
+impl OperationLike for OperationSequence {
     #[must_use]
-    pub fn saturate(mut self) -> OperationSequence {
+    fn saturate(mut self) -> OperationSequence {
         self.0.push(Operation::Sat);
         self
     }
 
-    /// Applies weakening
     #[must_use]
-    pub fn weaken(mut self) -> OperationSequence {
+    fn weaken(mut self) -> OperationSequence {
         self.0.push(Operation::Weak);
         self
     }
@@ -41,16 +41,6 @@ impl From<Operation> for OperationSequence {
 impl fmt::Display for OperationSequence {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0.iter().format(" "))
-    }
-}
-
-impl Add<OperationSequence> for OperationSequence {
-    type Output = OperationSequence;
-
-    fn add(mut self, rhs: OperationSequence) -> Self::Output {
-        self.0.extend(rhs.0);
-        self.0.push(Operation::Add);
-        self
     }
 }
 
@@ -110,6 +100,12 @@ impl From<ConstraintId> for Operation {
     }
 }
 
+impl From<Axiom> for Operation {
+    fn from(value: Axiom) -> Self {
+        Operation::Axiom(value)
+    }
+}
+
 impl fmt::Display for Operation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -124,19 +120,40 @@ impl fmt::Display for Operation {
     }
 }
 
-impl ConstraintId {
+/// A trait implemented by all types intended to be used in building an [`OperationSequence`]
+pub trait OperationLike:
+    Into<OperationSequence>
+    + Add<OperationSequence, Output = OperationSequence>
+    + Add<ConstraintId, Output = OperationSequence>
+    + Add<AbsConstraintId, Output = OperationSequence>
+    + Add<Axiom, Output = OperationSequence>
+    + Mul<usize, Output = OperationSequence>
+    + Div<usize, Output = OperationSequence>
+{
     /// Applies saturation
     #[must_use]
-    pub fn saturate(self) -> OperationSequence {
+    fn saturate(self) -> OperationSequence {
         Into::<OperationSequence>::into(self).saturate()
     }
-
     /// Applies weakening
     #[must_use]
-    pub fn weaken(self) -> OperationSequence {
+    fn weaken(self) -> OperationSequence {
         Into::<OperationSequence>::into(self).weaken()
     }
 }
+
+impl<O: OperationLike> Add<O> for OperationSequence {
+    type Output = OperationSequence;
+
+    fn add(mut self, rhs: O) -> Self::Output {
+        let rhs = Into::<OperationSequence>::into(rhs);
+        self.0.extend(rhs.0);
+        self.0.push(Operation::Add);
+        self
+    }
+}
+
+impl OperationLike for ConstraintId {}
 
 impl From<ConstraintId> for OperationSequence {
     fn from(value: ConstraintId) -> Self {
@@ -152,14 +169,6 @@ impl Add<OperationSequence> for ConstraintId {
     }
 }
 
-impl Add<ConstraintId> for OperationSequence {
-    type Output = OperationSequence;
-
-    fn add(self, rhs: ConstraintId) -> Self::Output {
-        self + Into::<OperationSequence>::into(rhs)
-    }
-}
-
 impl Add<ConstraintId> for ConstraintId {
     type Output = OperationSequence;
 
@@ -168,70 +177,10 @@ impl Add<ConstraintId> for ConstraintId {
     }
 }
 
-impl Add<Operation> for ConstraintId {
+impl Add<AbsConstraintId> for ConstraintId {
     type Output = OperationSequence;
 
-    fn add(self, rhs: Operation) -> Self::Output {
-        Into::<OperationSequence>::into(self) + Into::<OperationSequence>::into(rhs)
-    }
-}
-
-impl Add<ConstraintId> for Operation {
-    type Output = OperationSequence;
-
-    fn add(self, rhs: ConstraintId) -> Self::Output {
-        Into::<OperationSequence>::into(self) + Into::<OperationSequence>::into(rhs)
-    }
-}
-
-impl Mul<usize> for ConstraintId {
-    type Output = OperationSequence;
-
-    fn mul(self, rhs: usize) -> Self::Output {
-        Into::<OperationSequence>::into(self) * rhs
-    }
-}
-
-impl Mul<ConstraintId> for usize {
-    type Output = OperationSequence;
-
-    fn mul(self, rhs: ConstraintId) -> Self::Output {
-        rhs * self
-    }
-}
-
-impl Div<usize> for ConstraintId {
-    type Output = OperationSequence;
-
-    fn div(self, rhs: usize) -> Self::Output {
-        Into::<OperationSequence>::into(self) / rhs
-    }
-}
-
-impl From<Axiom> for Operation {
-    fn from(value: Axiom) -> Self {
-        Operation::Axiom(value)
-    }
-}
-
-impl From<Axiom> for OperationSequence {
-    fn from(value: Axiom) -> Self {
-        Into::<Operation>::into(value).into()
-    }
-}
-
-impl Add<Axiom> for Axiom {
-    type Output = OperationSequence;
-
-    fn add(self, rhs: Axiom) -> Self::Output {
-        Into::<OperationSequence>::into(self) + Into::<OperationSequence>::into(rhs)
-    }
-}
-
-impl Add<ConstraintId> for Axiom {
-    type Output = OperationSequence;
-
-    fn add(self, rhs: ConstraintId) -> Self::Output {
+    fn add(self, rhs: AbsConstraintId) -> Self::Output {
         Into::<OperationSequence>::into(self) + Into::<OperationSequence>::into(rhs)
     }
 }
@@ -244,6 +193,86 @@ impl Add<Axiom> for ConstraintId {
     }
 }
 
+impl Mul<usize> for ConstraintId {
+    type Output = OperationSequence;
+
+    fn mul(self, rhs: usize) -> Self::Output {
+        Into::<OperationSequence>::into(self) * rhs
+    }
+}
+
+impl Div<usize> for ConstraintId {
+    type Output = OperationSequence;
+
+    fn div(self, rhs: usize) -> Self::Output {
+        Into::<OperationSequence>::into(self) / rhs
+    }
+}
+
+impl OperationLike for AbsConstraintId {}
+
+impl From<AbsConstraintId> for OperationSequence {
+    fn from(value: AbsConstraintId) -> Self {
+        Into::<ConstraintId>::into(value).into()
+    }
+}
+
+impl Add<OperationSequence> for AbsConstraintId {
+    type Output = OperationSequence;
+
+    fn add(self, rhs: OperationSequence) -> Self::Output {
+        Into::<OperationSequence>::into(self) + rhs
+    }
+}
+
+impl Add<ConstraintId> for AbsConstraintId {
+    type Output = OperationSequence;
+
+    fn add(self, rhs: ConstraintId) -> Self::Output {
+        Into::<OperationSequence>::into(self) + Into::<OperationSequence>::into(rhs)
+    }
+}
+
+impl Add<AbsConstraintId> for AbsConstraintId {
+    type Output = OperationSequence;
+
+    fn add(self, rhs: AbsConstraintId) -> Self::Output {
+        Into::<OperationSequence>::into(self) + Into::<OperationSequence>::into(rhs)
+    }
+}
+
+impl Add<Axiom> for AbsConstraintId {
+    type Output = OperationSequence;
+
+    fn add(self, rhs: Axiom) -> Self::Output {
+        Into::<OperationSequence>::into(self) + Into::<OperationSequence>::into(rhs)
+    }
+}
+
+impl Mul<usize> for AbsConstraintId {
+    type Output = OperationSequence;
+
+    fn mul(self, rhs: usize) -> Self::Output {
+        Into::<OperationSequence>::into(self) * rhs
+    }
+}
+
+impl Div<usize> for AbsConstraintId {
+    type Output = OperationSequence;
+
+    fn div(self, rhs: usize) -> Self::Output {
+        Into::<OperationSequence>::into(self) / rhs
+    }
+}
+
+impl OperationLike for Axiom {}
+
+impl From<Axiom> for OperationSequence {
+    fn from(value: Axiom) -> Self {
+        Into::<Operation>::into(value).into()
+    }
+}
+
 impl Add<OperationSequence> for Axiom {
     type Output = OperationSequence;
 
@@ -252,11 +281,27 @@ impl Add<OperationSequence> for Axiom {
     }
 }
 
-impl Add<Axiom> for OperationSequence {
+impl Add<ConstraintId> for Axiom {
+    type Output = OperationSequence;
+
+    fn add(self, rhs: ConstraintId) -> Self::Output {
+        Into::<OperationSequence>::into(self) + Into::<OperationSequence>::into(rhs)
+    }
+}
+
+impl Add<AbsConstraintId> for Axiom {
+    type Output = OperationSequence;
+
+    fn add(self, rhs: AbsConstraintId) -> Self::Output {
+        Into::<OperationSequence>::into(self) + Into::<OperationSequence>::into(rhs)
+    }
+}
+
+impl Add<Axiom> for Axiom {
     type Output = OperationSequence;
 
     fn add(self, rhs: Axiom) -> Self::Output {
-        self + Into::<OperationSequence>::into(rhs)
+        Into::<OperationSequence>::into(self) + Into::<OperationSequence>::into(rhs)
     }
 }
 
@@ -265,14 +310,6 @@ impl Mul<usize> for Axiom {
 
     fn mul(self, rhs: usize) -> Self::Output {
         Into::<OperationSequence>::into(self) * rhs
-    }
-}
-
-impl Mul<Axiom> for usize {
-    type Output = OperationSequence;
-
-    fn mul(self, rhs: Axiom) -> Self::Output {
-        Into::<OperationSequence>::into(rhs) * self
     }
 }
 
@@ -286,6 +323,7 @@ impl Div<usize> for Axiom {
 
 #[cfg(test)]
 mod tests {
+    use super::OperationLike;
     use crate::{ConstraintId as Id, VarLike};
 
     #[test]
@@ -297,8 +335,6 @@ mod tests {
     #[test]
     fn constr_mult() {
         let mult = Id::abs(42) * 5;
-        assert_eq!(&format!("{mult}"), "42 5 *");
-        let mult = 5 * Id::abs(42);
         assert_eq!(&format!("{mult}"), "42 5 *");
     }
 

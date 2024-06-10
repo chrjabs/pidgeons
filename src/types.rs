@@ -17,8 +17,17 @@ pub enum ProblemType {
 }
 
 /// Different options to refer to a constraint
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ConstraintId {
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ConstraintId(ConstrIdInternal);
+
+impl From<ConstrIdInternal> for ConstraintId {
+    fn from(value: ConstrIdInternal) -> Self {
+        ConstraintId(value)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum ConstrIdInternal {
     /// An abosulte ID
     Abs(AbsConstraintId),
     /// A relative ID
@@ -33,9 +42,10 @@ impl ConstraintId {
     /// If `x` is zero.
     #[must_use]
     pub fn abs(x: usize) -> ConstraintId {
-        ConstraintId::Abs(AbsConstraintId(
+        ConstrIdInternal::Abs(AbsConstraintId(
             x.try_into().expect("constraint ID cannot be zero"),
         ))
+        .into()
     }
 
     /// Gets a relative constraint ID to the x-last constraint
@@ -45,45 +55,48 @@ impl ConstraintId {
     /// If `x` is zero.
     #[must_use]
     pub fn last(x: usize) -> ConstraintId {
-        ConstraintId::Rel(RelConstraintId(
+        ConstrIdInternal::Rel(RelConstraintId(
             x.try_into().expect("constraint ID cannot be zero"),
         ))
+        .into()
     }
 
     /// Makes a (potentially relative) constraint ID absolute
     #[must_use]
     pub fn make_absolute(self, next_free: AbsConstraintId) -> Self {
-        if let ConstraintId::Rel(id) = self {
-            return ConstraintId::Abs(id.make_absolute(next_free));
+        if let ConstraintId(ConstrIdInternal::Rel(id)) = self {
+            return ConstrIdInternal::Abs(id.make_absolute(next_free)).into();
         }
         self
     }
 
     #[must_use]
     pub(crate) fn increment(self, next_free: AbsConstraintId) -> Self {
-        match self {
-            ConstraintId::Abs(id) => ConstraintId::Abs(AbsConstraintId(unreachable_err!(
+        match self.0 {
+            ConstrIdInternal::Abs(id) => ConstrIdInternal::Abs(AbsConstraintId(unreachable_err!(
                 (usize::from(id.0) + 1).try_into()
-            ))),
-            ConstraintId::Rel(id) => {
+            )))
+            .into(),
+            ConstrIdInternal::Rel(id) => {
                 let rel = usize::from(id.0);
                 if rel == 1 {
-                    return ConstraintId::Abs(next_free);
+                    return ConstrIdInternal::Abs(next_free).into();
                 }
-                ConstraintId::Rel(RelConstraintId(unreachable_err!((rel - 1).try_into())))
+                ConstrIdInternal::Rel(RelConstraintId(unreachable_err!((rel - 1).try_into())))
+                    .into()
             }
         }
     }
 
     #[must_use]
     pub(crate) fn less(self, rhs: ConstraintId, next_free: AbsConstraintId) -> bool {
-        let rhs = match rhs {
-            ConstraintId::Abs(id) => id.0,
-            ConstraintId::Rel(id) => id.make_absolute(next_free).0,
+        let rhs = match rhs.0 {
+            ConstrIdInternal::Abs(id) => id.0,
+            ConstrIdInternal::Rel(id) => id.make_absolute(next_free).0,
         };
-        let lhs = match self {
-            ConstraintId::Abs(id) => id.0,
-            ConstraintId::Rel(id) => id.make_absolute(next_free).0,
+        let lhs = match self.0 {
+            ConstrIdInternal::Abs(id) => id.0,
+            ConstrIdInternal::Rel(id) => id.make_absolute(next_free).0,
         };
         lhs < rhs
     }
@@ -91,27 +104,27 @@ impl ConstraintId {
 
 impl fmt::Display for ConstraintId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ConstraintId::Abs(id) => write!(f, "{id}"),
-            ConstraintId::Rel(id) => write!(f, "{id}"),
+        match self.0 {
+            ConstrIdInternal::Abs(id) => write!(f, "{id}"),
+            ConstrIdInternal::Rel(id) => write!(f, "{id}"),
         }
     }
 }
 
 impl From<AbsConstraintId> for ConstraintId {
     fn from(value: AbsConstraintId) -> Self {
-        Self::Abs(value)
+        ConstrIdInternal::Abs(value).into()
     }
 }
 
 impl From<RelConstraintId> for ConstraintId {
     fn from(value: RelConstraintId) -> Self {
-        Self::Rel(value)
+        ConstrIdInternal::Rel(value).into()
     }
 }
 
 /// A type representing a VeriPB constraint ID
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct AbsConstraintId(pub(crate) NonZeroUsize);
 
 impl Default for AbsConstraintId {
@@ -127,8 +140,8 @@ impl fmt::Display for AbsConstraintId {
 }
 
 /// A constraint ID of the x-last constraint. Equivalent to a negative constraint ID in VeriPB.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct RelConstraintId(pub(crate) NonZeroUsize);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct RelConstraintId(pub(crate) NonZeroUsize);
 
 impl RelConstraintId {
     /// Makes a (potentially relative) constraint ID absolute

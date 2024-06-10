@@ -42,11 +42,11 @@ use itertools::Itertools;
 mod types;
 pub use types::{
     AbsConstraintId, Axiom, Conclusion, ConstraintId, ObjectiveUpdate, OutputGuarantee, OutputType,
-    ProblemType, ProofGoal, ProofGoalId, RelConstraintId, SubProof, Substitution,
+    ProblemType, ProofGoal, ProofGoalId, SubProof, Substitution,
 };
 
 mod ops;
-pub use ops::OperationSequence;
+pub use ops::{OperationLike, OperationSequence};
 
 macro_rules! unreachable_err {
     ($res:expr) => {{
@@ -238,12 +238,12 @@ where
         let range_start = match range.start_bound() {
             Bound::Included(b) => *b,
             Bound::Excluded(b) => b.increment(self.next_id),
-            Bound::Unbounded => ConstraintId::Abs(AbsConstraintId::default()),
+            Bound::Unbounded => AbsConstraintId::default().into(),
         };
         let range_end = match range.end_bound() {
             Bound::Included(b) => b.increment(self.next_id),
             Bound::Excluded(b) => *b,
-            Bound::Unbounded => ConstraintId::Abs(self.next_id),
+            Bound::Unbounded => self.next_id.into(),
         };
         assert!(range_start.less(range_end, self.next_id));
         writeln!(self.writer, "del range {range_start} {range_end}")
@@ -402,12 +402,12 @@ where
         let range_start = match range.start_bound() {
             Bound::Included(b) => *b,
             Bound::Excluded(b) => b.increment(self.next_id),
-            Bound::Unbounded => ConstraintId::Abs(AbsConstraintId::default()),
+            Bound::Unbounded => AbsConstraintId::default().into(),
         };
         let range_end = match range.end_bound() {
             Bound::Included(b) => b.increment(self.next_id),
             Bound::Excluded(b) => *b,
-            Bound::Unbounded => ConstraintId::Abs(self.next_id),
+            Bound::Unbounded => self.next_id.into(),
         };
         assert!(range_start.less(range_end, self.next_id));
         writeln!(self.writer, "core range {range_start} {range_end}")
